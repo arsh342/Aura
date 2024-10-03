@@ -54,34 +54,42 @@ const App = () => {
                 method: 'POST',
                 body: JSON.stringify({
                     history: chatHistory,
-                    message: value
+                    message: value,
                 }),
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                },
             };
 
-            const response = await fetch('http://localhost:8000/gemini', options);
-            const data = await response.text();
+            const response = await fetch('http://localhost:8001/gemini', options);
+            const data = await response.json(); // Change to .json()
 
-            setChatHistory(oldChatHistory => [
+            // Extract the response text from the data
+            const modelResponse = data.response || 'No response received.';
+
+            setChatHistory((oldChatHistory) => [
                 ...oldChatHistory,
                 {
                     role: "user",
-                    parts: [{ text: value }]
+                    parts: [{ text: value }],
                 },
                 {
                     role: "model",
-                    parts: [{ text: data }]
-                }
+                    parts: [{ text: modelResponse }],
+                },
             ]);
             setValue("");
         } catch (error) {
             console.error(error);
             setError("Something went wrong! Please try again later.");
-        }
-        finally {
+        } finally {
             setLoading(false);
+        }
+    };
+
+    const handleKeyPress = (event) => {
+        if (event.key === "Enter") {
+            getResponse(); // Call the getResponse function on Enter key press
         }
     };
 
@@ -94,17 +102,21 @@ const App = () => {
     return (
         <div className="app">
             <header className="header">
-                <img src="./logo.png" alt="Logo" className="header-logo"/>
-                <h1 className="header-text">Aura</h1>
+                <img src="./logo.png" alt="Logo" className="header-logo" />
+                <h1 className="header-text">Rexi</h1>
             </header>
             {error && <p className="text-danger text-center my-2">{error}</p>}
             <div className="search-result">
                 {chatHistory.map((chatItem, index) => (
-                    <div key={index} className="">
-                        <p className="font-weight-bold mb-1">{chatItem.role} :</p>
+                    <div key={index} className="chat-message">
+                        <p className={`font-weight-bold mb-1 ${chatItem.role === 'user' ? 'text-primary' : 'text-success'}`}>
+                            {chatItem.role === 'user' ? 'You' : 'Rexi'}:
+                        </p>
                         <ul className="list-unstyled">
                             {chatItem.parts.map((part, i) => (
-                                <li key={i}>{part.text}</li>
+                                <li key={i} className={`chat-response ${chatItem.role === 'user' ? 'user-response' : 'ai-response'}`}>
+                                    {part.text}
+                                </li>
                             ))}
                         </ul>
                     </div>
@@ -122,13 +134,13 @@ const App = () => {
                     value={value}
                     placeholder="Ask me anything..."
                     onChange={(e) => setValue(e.target.value)}
+                    onKeyPress={handleKeyPress} // Add the onKeyPress event
                     className="form-control mr-2"
                     disabled={loading}
                 />
-                {!error && !loading &&
-                    <button className="btn btn-success" onClick={getResponse}>Ask me</button>}
-                {error && !loading && <button className="btn btn-danger" onClick={clear}>Clear</button>}
-                <button className="btn btn-info" onClick={surprise}>Surprise Me</button>
+                <button className="btn btn-success" onClick={getResponse} disabled={loading}>Ask me</button>
+                <button className="btn btn-info" onClick={surprise} disabled={loading}>Surprise Me</button>
+                <button className="btn btn-danger" onClick={clear}>Clear</button>
             </div>
         </div>
     );
